@@ -1,0 +1,60 @@
+name: 금리 갱신 및 사이트 배포
+
+on:
+  schedule:
+    # 매일 08:45 (서울). 정각은 GitHub 부하로 지연·누락 가능성이 있어 피함
+    - cron: '45 8 * * *'
+      timezone: "Asia/Seoul"
+  workflow_dispatch:        # Actions 탭에서 수동 실행
+  push:
+    branches: [main]        # 파일을 직접 수정해 올리면 바로 재배포
+
+permissions:
+  contents: write           # rates.json 커밋
+  pages: write              # Pages 배포
+  id-token: write           # Pages 배포
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 저장소 가져오기
+        uses: actions/checkout@v6
+
+      - name: Node 준비
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: HF 주별 전세대출금리 수집
+        if: github.event_name != 'push'
+        id: fetch
+        run: node scripts/fetch-rates.mjs
+
+      - name: 변경 시 rates.json 커밋
+        if: github.event_name != 'push' && steps.fetch.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rates.json
+          git commit -m "금리 갱신: ${{ steps.fetch.outputs.period }}"
+          git push
+
+      - name: Pages 설정
+        uses: actions/configure-pages@v5
+
+      - name: 사이트 파일 업로드
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: '.'
+
+      - name: Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4

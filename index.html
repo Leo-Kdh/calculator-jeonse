@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2f6fde">
+<title>이자계산기_전세</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="vendor/chart.umd.min.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="이자계산기_전세">
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2f6fde; --accent2:#e07a2f; --good:#1f9d6b; --bad:#d64545;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14171c; --card:#1d2129; --ink:#e8ebf0; --muted:#9aa3b2; --line:#2e3440; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  .wrap{max-width:1140px;margin:0 auto;padding:24px 16px 48px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 20px;font-size:13px}
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{font-size:15px;margin:0 0 12px}
+  .sec{font-size:12px;font-weight:700;color:var(--accent);margin:18px 0 2px;padding-top:12px;border-top:1px dashed var(--line)}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:500}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .hint{font-size:11px;color:var(--muted);margin-top:3px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi .k{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:19px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+  .kpi .s{font-size:11px;color:var(--muted)}
+  .kpi.hl .v{color:var(--accent)}
+  .chartbox{position:relative;height:300px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--card)}
+  td:first-child,th:first-child{text-align:center}
+  tr.base td{font-weight:700;color:var(--accent)}
+  tr.reset td{background:color-mix(in srgb, var(--accent2) 8%, transparent)}
+  tfoot td{font-weight:700;border-top:2px solid var(--line)}
+  .scroll{max-height:420px;overflow:auto}
+  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+  .bar h2{margin:0}
+  button{font:inherit;font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.apply{padding:3px 10px}
+  .note{font-size:12px;color:var(--muted);margin-top:4px;padding-left:18px}
+  .note li{margin:3px 0}
+  .stack{display:flex;flex-direction:column;gap:16px}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+  .alert{font-size:12px;color:var(--accent2);margin-top:8px}
+  .verdict{font-size:14px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);margin:12px 0}
+  .verdict b{color:var(--accent)}
+  .cmpgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media (max-width:600px){.cmpgrid{grid-template-columns:1fr}}
+  a{color:var(--accent)}
+  .src{font-size:11px;color:var(--muted);margin-top:8px}
+  .grid>*,.stack>*,.row2>*,.cmpgrid>*{min-width:0}
+  .card{overflow-x:auto}
+  input,select{min-width:0}
+  @media (max-width:600px){ .wrap{padding:16px 10px 40px} th,td{padding:6px 6px;font-size:12px} .kpi .v{font-size:17px} .chartbox{height:260px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>전세대출 이자 계산기</h1>
+  <p class="sub">대출금액·금리·기간·상환방식·변동금리 시나리오를 넣으면 월 상환액, 총 이자, 상환표, 금리 민감도, 전세 vs 월세 비교를 계산합니다.</p>
+
+  <div class="grid">
+    <!-- 입력 -->
+    <div class="card">
+      <h2>입력</h2>
+      <label for="amt">대출금액 (만원)</label>
+      <input id="amt" type="number" min="0" step="100" value="20000">
+      <div class="hint" id="amtHint"></div>
+
+      <label for="rate">연 금리 (%) <span id="rateSrc" class="badge" style="display:none"></span></label>
+      <input id="rate" type="number" min="0" step="0.01" value="4.60">
+
+      <div class="row2">
+        <div>
+          <label for="term">대출기간 (개월)</label>
+          <input id="term" type="number" min="1" max="480" step="1" value="24">
+        </div>
+        <div>
+          <label for="start">대출 실행일</label>
+          <input id="start" type="date">
+        </div>
+      </div>
+
+      <label for="method">상환방식</label>
+      <select id="method">
+        <option value="bullet">만기일시상환 (매월 이자만 납부)</option>
+        <option value="partial">일부분할상환 (일부 원금균등 + 잔여 만기상환)</option>
+        <option value="annuity">원리금균등분할상환</option>
+        <option value="equal">원금균등분할상환</option>
+      </select>
+
+      <div id="partialBox" style="display:none">
+        <label for="partialPct">기간 중 분할상환 비율 (%)</label>
+        <input id="partialPct" type="number" min="0" max="100" step="1" value="10">
+        <div class="hint">입력한 비율만큼 매월 균등 상환, 나머지는 만기에 일시상환</div>
+      </div>
+
+      <label for="basis">이자 계산 기준</label>
+      <select id="basis">
+        <option value="month">월할 (연 금리 ÷ 12)</option>
+        <option value="day">일할 (실제 일수 ÷ 365)</option>
+      </select>
+      <div class="hint">실제 청구 기준은 약정서 확인 필요</div>
+
+      <div class="sec">금리 유형</div>
+      <label for="rtype">고정 / 변동</label>
+      <select id="rtype">
+        <option value="fixed">고정금리</option>
+        <option value="var">변동금리 (주기별 재산정)</option>
+      </select>
+      <div id="varBox" style="display:none">
+        <label for="cycle">재산정 주기</label>
+        <select id="cycle">
+          <option value="3">3개월</option>
+          <option value="6" selected>6개월</option>
+          <option value="12">12개월</option>
+        </select>
+        <label for="vmode">시나리오</label>
+        <select id="vmode">
+          <option value="step">재산정 때마다 일정 폭 변동</option>
+          <option value="path">구간별 금리 직접 입력</option>
+        </select>
+        <div id="stepBox">
+          <label for="vstep">재산정 1회당 변동폭 (%p)</label>
+          <input id="vstep" type="number" step="0.05" value="0.25">
+          <div class="hint">인상은 +, 인하는 − (예: −0.25)</div>
+        </div>
+        <div id="pathBox" style="display:none">
+          <label for="vpath">재산정 이후 구간별 금리 (%, 쉼표 구분)</label>
+          <input id="vpath" type="text" placeholder="예: 4.85, 5.10, 4.90">
+          <div class="hint">1구간은 위 '연 금리', 2구간부터 순서대로 적용. 입력값이 모자라면 마지막 값 유지</div>
+        </div>
+        <label for="vfloor">금리 하한 (%)</label>
+        <input id="vfloor" type="number" min="0" step="0.1" value="0">
+      </div>
+
+      <div class="sec">부대비용</div>
+      <label for="fee">보증료율 (연 %, 선택)</label>
+      <input id="fee" type="number" min="0" step="0.001" value="0">
+      <div class="hint">보증기관·소득·보증금에 따라 다름 → 안내받은 요율 입력. 간이 계산: 대출금 × 요율 × 기간</div>
+
+      <label for="deposit">전세보증금 (만원)</label>
+      <input id="deposit" type="number" min="0" step="100" value="30000">
+      <div class="hint" id="ltvHint"></div>
+      <div class="alert" id="err"></div>
+    </div>
+
+    <!-- 결과 -->
+    <div class="stack">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="card">
+        <div class="bar">
+          <h2>월별 상환 흐름</h2>
+          <span class="badge" id="chartBadge"></span>
+        </div>
+        <div class="chartbox"><canvas id="chart1"></canvas></div>
+      </div>
+
+      <!-- 은행별 금리 -->
+      <div class="card">
+        <div class="bar">
+          <h2>6대 은행 전세대출 평균금리</h2>
+          <span class="badge" id="bankPeriod"></span>
+        </div>
+        <div class="chartbox" style="height:220px"><canvas id="chart3"></canvas></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>은행</th><th>평균 적용금리</th><th>전주 대비</th><th>6개 은행 평균 대비</th><th></th></tr></thead>
+          <tbody id="banks"></tbody>
+        </table>
+        <div class="src" id="bankSrc"></div>
+      </div>
+
+      <!-- 금리 추이 -->
+      <div class="card">
+        <div class="bar">
+          <h2>은행별 전세대출 금리 추이 (주별)</h2>
+          <span class="badge" id="trendBadge"></span>
+        </div>
+        <div class="chartbox" style="height:280px"><canvas id="chart5"></canvas></div>
+        <div class="scroll" style="max-height:300px;margin-top:12px">
+          <table>
+            <thead id="trendHead"></thead>
+            <tbody id="trendBody"></tbody>
+          </table>
+        </div>
+        <div class="hint">막대: 6개 은행 평균 / 선: 은행별 금리 · 매주 공시가 나오면 자동으로 한 주씩 추가됨 (범례 클릭 시 은행 숨김/표시)</div>
+      </div>
+
+      <!-- 전세 vs 월세 -->
+      <div class="card">
+        <div class="bar">
+          <h2>전세 vs 월세 월 부담 비교</h2>
+          <span class="badge">대출 조건은 위 입력값 사용</span>
+        </div>
+        <div class="cmpgrid">
+          <div>
+            <label for="wDep">월세 보증금 (만원)</label>
+            <input id="wDep" type="number" min="0" step="100" value="5000">
+          </div>
+          <div>
+            <label for="wRent">월세 (만원)</label>
+            <input id="wRent" type="number" min="0" step="1" value="90">
+          </div>
+          <div>
+            <label for="opp">자기자금 기회비용 (연 %)</label>
+            <input id="opp" type="number" min="0" step="0.05" value="3.00">
+          </div>
+        </div>
+        <div class="hint">기회비용 = 보증금에 묶인 내 돈을 예금 등에 넣었을 때 받을 수 있는 수익률(본인 예금금리 입력)</div>
+        <div class="verdict" id="verdict"></div>
+        <div class="chartbox" style="height:260px"><canvas id="chart4"></canvas></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>항목</th><th>전세</th><th>월세</th></tr></thead>
+          <tbody id="cmp"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="bar">
+          <h2>금리 변동 민감도</h2>
+          <span class="badge">기준 금리 ±1.0%p (변동 시나리오 포함)</span>
+        </div>
+        <div class="chartbox" style="height:240px"><canvas id="chart2"></canvas></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>시작 금리</th><th>변동폭</th><th>첫 회 납입액</th><th>월평균 이자</th><th>총 이자</th><th>기준 대비</th></tr></thead>
+          <tbody id="sens"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="bar">
+          <h2>월별 상환표</h2>
+          <button id="copyBtn">엑셀용 복사</button>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>회차</th><th>납입일</th><th>일수</th><th>적용금리</th><th>납입원금</th><th>이자</th><th>납입액</th><th>대출잔액</th></tr></thead>
+            <tbody id="sched"></tbody>
+            <tfoot id="schedFoot"></tfoot>
+          </table>
+        </div>
+        <div class="hint">주황 배경 = 금리 재산정 회차</div>
+      </div>
+
+      <ul class="note">
+        <li>이자는 회차별 원 미만 절사. 일할 계산은 연 365일 기준.</li>
+        <li>원리금균등: 재산정 시점마다 남은 잔액·남은 기간·새 금리로 월 납입액을 다시 계산. 일할 기준이면 이자 차이를 원금 상환분에서 조정하고, 마지막 회차에 잔액을 정산.</li>
+        <li>전세 vs 월세: 원금 상환액은 비용이 아니므로 제외. 이자·보증료·기회비용만 비교. 전세보증금 미반환 위험, 중개보수, 관리비는 반영하지 않음.</li>
+        <li>중도상환수수료, 인지세, 보증료 납부 방식(일시/분납)은 반영하지 않음. 실제 금액은 금융기관 약정서·상환스케줄표 기준.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+let BANK_RATES = null; // rates.json에서 불러옴
+
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const won = n => fmt(n) + '원';
+const manwon = n => {
+  const m = n / 10000;
+  if (Math.abs(m) >= 10000) return (m/10000).toLocaleString('ko-KR',{maximumFractionDigits:2}) + '억원';
+  return m.toLocaleString('ko-KR',{maximumFractionDigits:1}) + '만원';
+};
+$('start').value = new Date().toISOString().slice(0,10);
+
+function addMonths(date, m){
+  const y = date.getFullYear(), mo = date.getMonth() + m, day = date.getDate();
+  const last = new Date(y, mo + 1, 0).getDate();
+  return new Date(y, mo, Math.min(day, last));
+}
+const dayDiff = (a,b) => Math.round((b - a) / 86400000);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+/* 회차 k(1부터)의 적용 금리(%) */
+function makeRateFn(base, v){
+  if (!v || v.type !== 'var') return () => base;
+  return k => {
+    const idx = Math.floor((k - 1) / v.cycle);           // 0 = 최초 구간
+    let r;
+    if (v.mode === 'path'){
+      if (idx === 0 || !v.path.length) r = base;
+      else r = v.path[Math.min(idx - 1, v.path.length - 1)] + v.shift;
+    } else r = base + idx * v.step;
+    return Math.max(v.floor, r);
+  };
+}
+
+function schedule(L, rateFn, n, method, basis, start, partialPct, cycle){
+  const rows = [];
+  let bal = L, prev = start;
+  let amortBase = 0;
+  if (method === 'equal' || method === 'annuity') amortBase = L;
+  if (method === 'partial') amortBase = Math.floor(L * partialPct / 100);
+  const princEach = Math.floor(amortBase / n);
+  let annuityPay = 0, lastRate = null;
+  for (let k = 1; k <= n; k++){
+    const ratePct = rateFn(k);
+    const r = ratePct / 100;
+    const isReset = k > 1 && lastRate !== null && ratePct !== lastRate;
+    if (method === 'annuity' && (k === 1 || ratePct !== lastRate)){
+      const rem = n - k + 1, mr = r / 12;
+      annuityPay = mr === 0 ? Math.ceil(bal / rem) : Math.ceil(bal * mr / (1 - Math.pow(1 + mr, -rem)));
+    }
+    const due = addMonths(start, k);
+    const days = dayDiff(prev, due);
+    const interest = Math.floor(basis === 'day' ? bal * r * days / 365 : bal * r / 12);
+    let principal;
+    if (method === 'bullet') principal = (k === n) ? bal : 0;
+    else if (method === 'equal' || method === 'partial') principal = (k === n) ? bal : Math.min(bal, princEach);
+    else principal = (k === n) ? bal : Math.max(0, Math.min(bal, annuityPay - interest));
+    bal -= principal;
+    rows.push({k, date: ymd(due), days, rate: ratePct, reset: isReset, principal, interest, pay: principal + interest, bal});
+    prev = due; lastRate = ratePct;
+  }
+  return rows;
+}
+
+let charts = {}, lastRows = [];
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function draw(id, cfg){ if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); }
+const ttWon = ctx => `${ctx.dataset.label}: ${won(ctx.parsed.y)}`;
+
+function readInputs(){
+  const v = {
+    type: $('rtype').value,
+    cycle: +$('cycle').value,
+    mode: $('vmode').value,
+    step: +$('vstep').value || 0,
+    path: $('vpath').value.split(/[,\s]+/).map(Number).filter(x => isFinite(x) && x > 0),
+    floor: Math.max(0, +$('vfloor').value || 0),
+    shift: 0
+  };
+  let start = new Date($('start').value); if (isNaN(start)) start = new Date();
+  return {
+    L: Math.max(0, (+$('amt').value || 0) * 10000),
+    rate: Math.max(0, +$('rate').value || 0),
+    n: Math.min(480, Math.max(1, Math.floor(+$('term').value || 1))),
+    method: $('method').value,
+    basis: $('basis').value,
+    feeRate: Math.max(0, +$('fee').value || 0),
+    partialPct: Math.min(100, Math.max(0, +$('partialPct').value || 0)),
+    dep: (+$('deposit').value || 0) * 10000,
+    start, v
+  };
+}
+
+function render(){
+  const I = readInputs();
+  const {L, rate, n, method, basis, feeRate, partialPct, dep, start, v} = I;
+  $('partialBox').style.display = method === 'partial' ? '' : 'none';
+  $('varBox').style.display = v.type === 'var' ? '' : 'none';
+  $('stepBox').style.display = v.mode === 'step' ? '' : 'none';
+  $('pathBox').style.display = v.mode === 'path' ? '' : 'none';
+
+  $('amtHint').textContent = L ? `= ${won(L)} (${manwon(L)})` : '';
+  $('ltvHint').textContent = dep > 0 ? `보증금 대비 대출비율: ${(L/dep*100).toFixed(1)}% · 자기자금 ${manwon(Math.max(0,dep-L))}` : '전세 vs 월세 비교·대출비율 계산에 사용';
+  $('err').textContent = (dep > 0 && L > dep) ? '대출금액이 전세보증금보다 큽니다. 입력값을 확인하세요.' : '';
+
+  const rows = schedule(L, makeRateFn(rate, v), n, method, basis, start, partialPct);
+  lastRows = rows;
+  const totInt = rows.reduce((s,x)=>s+x.interest,0);
+  const fee = Math.floor(L * feeRate / 100 * n / 12);
+  const first = rows[0];
+  const avgInt = totInt / rows.length;
+  const rates = rows.map(x=>x.rate);
+  const minR = Math.min(...rates), maxR = Math.max(...rates);
+  const methodName = $('method').selectedOptions[0].text.split(' (')[0];
+
+  $('kpis').innerHTML = `
+    <div class="kpi hl"><div class="k">첫 회 납입액</div><div class="v">${won(first.pay)}</div><div class="s">이자 ${won(first.interest)}</div></div>
+    <div class="kpi"><div class="k">월평균 이자</div><div class="v">${won(avgInt)}</div><div class="s">${basis==='day'?'일할':'월할'} 기준</div></div>
+    <div class="kpi"><div class="k">총 이자</div><div class="v">${won(totInt)}</div><div class="s">${n}개월 · ${methodName}</div></div>
+    <div class="kpi"><div class="k">적용 금리 범위</div><div class="v">${minR===maxR? minR.toFixed(2)+'%' : minR.toFixed(2)+'~'+maxR.toFixed(2)+'%'}</div><div class="s">${v.type==='var'?`변동 · ${v.cycle}개월 재산정`:'고정'}</div></div>
+    <div class="kpi"><div class="k">총 금융비용</div><div class="v">${won(totInt + fee)}</div><div class="s">보증료 ${won(fee)} 포함 · 월 ${won((totInt+fee)/n)}</div></div>
+  `;
+
+  $('sched').innerHTML = rows.map(x=>`<tr class="${x.reset?'reset':''}"><td>${x.k}</td><td>${x.date}</td><td>${x.days}</td><td>${x.rate.toFixed(2)}%</td><td>${fmt(x.principal)}</td><td>${fmt(x.interest)}</td><td>${fmt(x.pay)}</td><td>${fmt(x.bal)}</td></tr>`).join('');
+  const totP = rows.reduce((s,x)=>s+x.principal,0);
+  $('schedFoot').innerHTML = `<tr><td>합계</td><td></td><td>${rows.reduce((s,x)=>s+x.days,0)}</td><td></td><td>${fmt(totP)}</td><td>${fmt(totInt)}</td><td>${fmt(totP+totInt)}</td><td></td></tr>`;
+
+  const accent = cssVar('--accent'), accent2 = cssVar('--accent2'), muted = cssVar('--muted'), line = cssVar('--line'), good = cssVar('--good');
+
+  // 차트1: 막대(원금·이자) + 꺾은선(잔액, 금리)
+  const bulletLike = method === 'bullet' || method === 'partial';
+  const lastP = rows[rows.length-1].principal;
+  $('chartBadge').textContent = bulletLike ? `만기 일시상환 원금 ${manwon(lastP)}은 막대에서 제외` : '막대: 월 납입액 / 선: 대출잔액·금리';
+  const pData = rows.map((x,i)=> (bulletLike && i===rows.length-1) ? (method==='partial'? Math.floor(L*partialPct/100/n) : 0) : x.principal);
+  const ds1 = [
+    {type:'bar', label:'납입원금', data:pData, backgroundColor:accent+'cc', stack:'s', yAxisID:'y', order:3},
+    {type:'bar', label:'이자', data:rows.map(x=>x.interest), backgroundColor:accent2+'cc', stack:'s', yAxisID:'y', order:3},
+    {type:'line', label:'대출잔액', data:rows.map(x=>x.bal), borderColor:good, backgroundColor:'transparent', pointRadius: n>60?0:2, tension:0.15, yAxisID:'y2', order:1}
+  ];
+  const scales1 = {
+    x:{ stacked:true, ticks:{color:muted, maxTicksLimit:12}, grid:{display:false} },
+    y:{ stacked:true, position:'left', title:{display:true,text:'월 납입액',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{color:line} },
+    y2:{ position:'right', beginAtZero:true, title:{display:true,text:'대출잔액',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{display:false} }
+  };
+  if (v.type === 'var'){
+    ds1.push({type:'line', label:'적용금리', data:rates, borderColor:cssVar('--bad'), borderDash:[5,4], stepped:true, pointRadius:0, yAxisID:'y3', order:2});
+    scales1.y3 = { position:'right', display:true, title:{display:true,text:'금리(%)',color:muted}, ticks:{color:muted, callback:v=>v.toFixed(2)+'%'}, grid:{display:false},
+      suggestedMin: Math.max(0, minR-0.5), suggestedMax: maxR+0.5 };
+  }
+  draw('chart1', {
+    data:{ labels: rows.map(x=>x.k+'회'), datasets: ds1 },
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{labels:{color:muted, boxWidth:12}}, tooltip:{callbacks:{label:ctx=> ctx.dataset.yAxisID==='y3' ? `적용금리: ${ctx.parsed.y.toFixed(2)}%` : ttWon(ctx)}} },
+      scales: scales1 }
+  });
+
+  // 민감도: 시작 금리(및 직접입력 경로)를 함께 평행이동
+  const steps = [-1, -0.5, 0, 0.5, 1];
+  const sens = steps.map(d=>{
+    const vv = {...v, shift: d};
+    const rs = schedule(L, makeRateFn(Math.max(0, rate + d), vv), n, method, basis, start, partialPct);
+    const ti = rs.reduce((s,x)=>s+x.interest,0);
+    return {d, rr: Math.max(0, rate + d), first: rs[0].pay, avg: ti/rs.length, ti};
+  });
+  const base = sens[2].ti;
+  $('sens').innerHTML = sens.map(s=>`<tr class="${s.d===0?'base':''}"><td>${s.rr.toFixed(2)}%</td><td>${s.d>0?'+':''}${s.d.toFixed(1)}%p</td><td>${fmt(s.first)}</td><td>${fmt(s.avg)}</td><td>${fmt(s.ti)}</td><td>${s.ti-base>0?'+':''}${fmt(s.ti-base)}</td></tr>`).join('');
+  draw('chart2', {
+    data:{ labels: sens.map(s=>s.rr.toFixed(2)+'%'), datasets:[
+      {type:'bar', label:'총 이자', data:sens.map(s=>s.ti), backgroundColor:sens.map(s=>s.d===0?accent:accent+'66'), yAxisID:'y', order:2},
+      {type:'line', label:'월평균 이자', data:sens.map(s=>s.avg), borderColor:accent2, backgroundColor:accent2, pointRadius:4, yAxisID:'y2', order:1}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{labels:{color:muted, boxWidth:12}}, tooltip:{callbacks:{label:ttWon}} },
+      scales:{
+        x:{ ticks:{color:muted}, grid:{display:false} },
+        y:{ beginAtZero:true, title:{display:true,text:'총 이자',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{color:line} },
+        y2:{ position:'right', beginAtZero:true, title:{display:true,text:'월평균 이자',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{display:false} }
+      } }
+  });
+
+  // 전세 vs 월세
+  const opp = Math.max(0, +$('opp').value || 0) / 100;
+  const wDep = (+$('wDep').value || 0) * 10000;
+  const wRent = (+$('wRent').value || 0) * 10000;
+  const own = Math.max(0, dep - L);
+  const feeM = fee / n;
+  const jOppM = own * opp / 12;
+  const wOppM = wDep * opp / 12;
+  const jMonthly = rows.map(x => x.interest + feeM + jOppM);
+  const wMonthly = rows.map(() => wRent + wOppM);
+  const jTot = jMonthly.reduce((a,b)=>a+b,0), wTot = wMonthly.reduce((a,b)=>a+b,0);
+  const jAvg = jTot / n, wAvg = wTot / n;
+  const conv = dep > wDep ? (wRent * 12 / (dep - wDep) * 100) : null;
+  // 손익분기 대출금리(만기일시·월할 근사): L*r/12 + feeM + jOppM = wAvg
+  const beRate = L > 0 ? ((wAvg - feeM - jOppM) * 12 / L * 100) : null;
+  const cheaper = jAvg < wAvg ? '전세' : '월세';
+  const diff = Math.abs(jAvg - wAvg);
+  $('verdict').innerHTML = dep > 0
+    ? `월평균 기준 <b>${cheaper}</b>가 <b>${won(diff)}</b> 저렴 (${n}개월 누적 차이 ${won(Math.abs(jTot-wTot))})` +
+      (beRate !== null ? `<br><span class="hint">손익분기 대출금리 ≈ <b>${beRate.toFixed(2)}%</b> (이 금리보다 낮으면 전세 유리 · 만기일시·월할 근사)</span>` : '')
+    : '전세보증금을 입력하세요.';
+  $('cmp').innerHTML = `
+    <tr><td>보증금</td><td>${won(dep)}</td><td>${won(wDep)}</td></tr>
+    <tr><td>└ 대출</td><td>${won(L)}</td><td>-</td></tr>
+    <tr><td>└ 자기자금</td><td>${won(own)}</td><td>${won(wDep)}</td></tr>
+    <tr><td>월 대출이자 (평균)</td><td>${won(avgInt)}</td><td>-</td></tr>
+    <tr><td>월 보증료 (환산)</td><td>${won(feeM)}</td><td>-</td></tr>
+    <tr><td>월세</td><td>-</td><td>${won(wRent)}</td></tr>
+    <tr><td>월 기회비용</td><td>${won(jOppM)}</td><td>${won(wOppM)}</td></tr>
+    <tr class="base"><td>월평균 총부담</td><td>${won(jAvg)}</td><td>${won(wAvg)}</td></tr>
+    <tr><td>${n}개월 누적</td><td>${won(jTot)}</td><td>${won(wTot)}</td></tr>
+    <tr><td>전월세 전환율 (역산)</td><td colspan="2" style="text-align:center">${conv!==null? conv.toFixed(2)+'% (월세×12 ÷ 보증금 차액)':'-'}</td></tr>`;
+  let cj=0, cw=0;
+  const cumJ = jMonthly.map(x=>cj+=x), cumW = wMonthly.map(x=>cw+=x);
+  draw('chart4', {
+    data:{ labels: rows.map(x=>x.k+'회'), datasets:[
+      {type:'bar', label:'전세 월부담', data:jMonthly, backgroundColor:accent+'cc', yAxisID:'y', order:2},
+      {type:'bar', label:'월세 월부담', data:wMonthly, backgroundColor:accent2+'cc', yAxisID:'y', order:2},
+      {type:'line', label:'전세 누적', data:cumJ, borderColor:accent, pointRadius:0, yAxisID:'y2', order:1},
+      {type:'line', label:'월세 누적', data:cumW, borderColor:accent2, pointRadius:0, yAxisID:'y2', order:1}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{labels:{color:muted, boxWidth:12}}, tooltip:{callbacks:{label:ttWon}} },
+      scales:{
+        x:{ ticks:{color:muted, maxTicksLimit:12}, grid:{display:false} },
+        y:{ beginAtZero:true, title:{display:true,text:'월 부담',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{color:line} },
+        y2:{ position:'right', beginAtZero:true, title:{display:true,text:'누적 부담',color:muted}, ticks:{color:muted, callback:v=>manwon(v)}, grid:{display:false} }
+      } }
+  });
+}
+
+function renderBanks(){
+  const H = [...BANK_RATES.history].sort((x,y)=>x.period.localeCompare(y.period));
+  const names = BANK_RATES.banks;
+  const num = v => typeof v === 'number' && isFinite(v);
+  const cur = H[H.length-1], prevW = H.length > 1 ? H[H.length-2] : null;
+  const avgOf = rs => { const v = rs.filter(num); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; };
+  const avg = avgOf(cur.rates);
+  const muted = cssVar('--muted'), accent = cssVar('--accent'), accent2 = cssVar('--accent2'), line = cssVar('--line');
+  const sgn = d => { const r = Math.round(d*100)/100; return (r>0?'+':'') + (r===0?0:r).toFixed(2) + '%p'; };
+
+  $('bankPeriod').textContent = `취급기간 ${cur.period}`;
+  $('bankSrc').innerHTML = `출처: <a href="${BANK_RATES.url}" target="_blank" rel="noopener">${BANK_RATES.source}</a> · 반영일 ${BANK_RATES.updated}<br>HF 보증서 담보 전세대출의 해당 주 평균금리(버팀목 등 주택도시기금 재원·지자체 협약 상품 제외). 개인 적용금리는 신용·거래실적에 따라 다름 → 은행 확인 필요.`;
+  $('banks').innerHTML = names.map((n,i)=>{
+    const r = cur.rates[i], ok = num(r);
+    const pr = prevW ? prevW.rates[i] : null;
+    const dw = ok && num(pr) ? sgn(r - pr) : '-';
+    return `<tr><td>${n}</td><td>${ok? r.toFixed(2)+'%' : '취급 없음'}</td><td>${dw}</td><td>${ok && avg!==null ? sgn(r-avg) : '-'}</td><td>${ok?`<button class="apply" data-i="${i}">이 금리 적용</button>`:''}</td></tr>`;
+  }).join('') + (avg!==null ? `<tr class="base"><td>6개 은행 평균</td><td>${avg.toFixed(2)}%</td><td>${prevW && avgOf(prevW.rates)!==null ? sgn(avg-avgOf(prevW.rates)) : '-'}</td><td>-</td><td><button class="apply" data-avg="1">평균 적용</button></td></tr>` : '');
+  document.querySelectorAll('button.apply').forEach(btn=>btn.addEventListener('click', ()=>{
+    const r = btn.dataset.avg ? avg : cur.rates[+btn.dataset.i];
+    const label = btn.dataset.avg ? '6개 은행 평균' : names[+btn.dataset.i];
+    $('rate').value = r.toFixed(2);
+    $('rateSrc').style.display = ''; $('rateSrc').textContent = label + ' ' + cur.period.slice(0,10) + '주';
+    render();
+  }));
+  const curVals = cur.rates.filter(num);
+  draw('chart3', {
+    data:{ labels: names.map(n=>n.replace('은행','')), datasets:[
+      {type:'bar', label:'평균 적용금리', data: cur.rates.map(r=>num(r)?r:null), backgroundColor: accent+'cc', order:2},
+      {type:'line', label:'6개 은행 평균', data: names.map(()=> avg!==null ? +avg.toFixed(2) : null), borderColor: accent2, borderDash:[5,4], pointRadius:0, order:1}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{labels:{color:muted, boxWidth:12}}, tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}} },
+      scales:{ x:{ticks:{color:muted}, grid:{display:false}},
+        y:{ beginAtZero:false, min: curVals.length ? Math.floor((Math.min(...curVals)-0.3)*10)/10 : undefined, ticks:{color:muted, callback:v=>v.toFixed(2)+'%'}, grid:{color:line} } } }
+  });
+
+  // 추이: 막대=주별 6개 은행 평균, 선=은행별
+  const wk = H.map(h=>h.period.slice(5,10).replace('-','/') + '주');
+  const palette = ['#2f6fde','#1f9d6b','#8a5cd6','#d64545','#c99a1e','#2aa3b8'];
+  const all = H.flatMap(h=>h.rates.filter(num));
+  $('trendBadge').textContent = `${H.length}주 · ${H[0].period.slice(0,10)} ~ ${cur.period.slice(-10)}`;
+  draw('chart5', {
+    data:{ labels: wk, datasets:[
+      {type:'bar', label:'6개 은행 평균', data: H.map(h=>{const a=avgOf(h.rates); return a===null?null:+a.toFixed(3);}), backgroundColor: accent2+'55', borderColor: accent2, borderWidth:1, order:2},
+      ...names.map((n,i)=>({type:'line', label:n.replace('은행',''), data: H.map(h=>num(h.rates[i])?h.rates[i]:null), borderColor: palette[i], backgroundColor: palette[i], pointRadius:3, tension:0.2, spanGaps:true, order:1}))
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{labels:{color:muted, boxWidth:12}}, tooltip:{callbacks:{label:ctx=> ctx.parsed.y==null ? `${ctx.dataset.label}: 취급 없음` : `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}} },
+      scales:{ x:{ticks:{color:muted}, grid:{display:false}},
+        y:{ beginAtZero:false, min: all.length ? Math.floor((Math.min(...all)-0.3)*10)/10 : undefined, max: all.length ? Math.ceil((Math.max(...all)+0.2)*10)/10 : undefined, ticks:{color:muted, callback:v=>v.toFixed(2)+'%'}, grid:{color:line} } } }
+  });
+  $('trendHead').innerHTML = `<tr><th>취급기간</th>${names.map(n=>`<th>${n.replace('은행','')}</th>`).join('')}<th>평균</th></tr>`;
+  $('trendBody').innerHTML = [...H].reverse().map(h=>{
+    const a = avgOf(h.rates);
+    return `<tr><td>${h.period}</td>${h.rates.map(r=>`<td>${num(r)? r.toFixed(2):'-'}</td>`).join('')}<td><b>${a===null?'-':a.toFixed(2)}</b></td></tr>`;
+  }).join('');
+}
+
+$('copyBtn').addEventListener('click', async ()=>{
+  const head = ['회차','납입일','일수','적용금리(%)','납입원금','이자','납입액','대출잔액'].join('\t');
+  const body = lastRows.map(x=>[x.k,x.date,x.days,x.rate.toFixed(2),x.principal,x.interest,x.pay,x.bal].join('\t')).join('\n');
+  try{ await navigator.clipboard.writeText(head + '\n' + body); $('copyBtn').textContent = '복사됨 ✓'; }
+  catch(e){ $('copyBtn').textContent = '복사 실패(브라우저 제한)'; }
+  setTimeout(()=>$('copyBtn').textContent='엑셀용 복사', 1800);
+});
+
+document.querySelectorAll('input,select').forEach(el=>{
+  el.addEventListener('input', ()=>{ if (el.id==='rate') $('rateSrc').style.display='none'; render(); });
+  el.addEventListener('change', render);
+});
+render();
+fetch('rates.json', {cache:'no-store'})
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { BANK_RATES = d; renderBanks(); })
+  .catch(e => {
+    $('bankSrc').textContent = '금리 데이터(rates.json)를 불러오지 못했습니다. 계산 기능은 정상 사용 가능합니다. (' + e.message + ')';
+  });
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

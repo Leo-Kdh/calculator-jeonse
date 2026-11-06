@@ -1,0 +1,16 @@
+{
+  "name": "이자계산기_전세",
+  "short_name": "이자계산기_전세",
+  "description": "전세대출 이자·상환표·변동금리·전세 vs 월세 비교 계산기 (6대 은행 금리 주별 자동 반영)",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#2f6fde",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
