@@ -2,7 +2,7 @@
 // - 앱 화면 파일: 캐시 우선 (오프라인 실행)
 // - rates.json: 네트워크 우선 (항상 최신 금리, 오프라인이면 마지막 저장본)
 // 화면 파일(index.html 등)을 수정하면 아래 버전을 올려야 사용자 기기에 반영됨
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'jeonse-app-' + VERSION;
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './vendor/chart.umd.min.js',
